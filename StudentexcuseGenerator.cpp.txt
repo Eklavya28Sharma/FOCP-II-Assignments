@@ -1,0 +1,76 @@
+#include <iostream>
+#include <fstream>
+#include <vector>
+#include <string>
+#include <random>
+#include <algorithm>
+
+// Utility function to trim whitespace from both ends of a string
+static std::string trim(const std::string& s) {
+    const auto start = s.find_first_not_of(" \t\r\n");
+    if (start == std::string::npos) return "";
+    const auto end = s.find_last_not_of(" \t\r\n");
+    return s.substr(start, end - start + 1);
+}
+
+// Load excuse templates from a text file (one per line). Empty lines are ignored.
+static std::vector<std::string> loadExcuses(const std::string& path) {
+    std::ifstream in(path);
+    if (!in) {
+        // File could not be opened – caller will treat this as a failure.
+        return {};
+    }
+    std::vector<std::string> excuses;
+    std::string line;
+    while (std::getline(in, line)) {
+        line = trim(line);
+        if (!line.empty()) {
+            excuses.push_back(line);
+        }
+    }
+    return excuses;
+}
+
+// Replace the placeholder "{name}" with the actual name.
+static std::string substituteName(const std::string& templateStr, const std::string& name) {
+    std::string result = templateStr;
+    const std::string placeholder = "{name}";
+    size_t pos = 0;
+    while ((pos = result.find(placeholder, pos)) != std::string::npos) {
+        result.replace(pos, placeholder.length(), name);
+        pos += name.length();
+    }
+    return result;
+}
+
+int main() {
+    const std::string excusesFile = "excuses.txt"; // relative to executable's working directory
+    auto excuses = loadExcuses(excusesFile);
+
+    if (excuses.empty()) {
+        std::cerr << "Sorry this thing is wrong" << std::endl;
+        return 1;
+    }
+
+    // Prompt for the student's name
+    std::cout << "Enter the student's name: ";
+    std::string name;
+    std::getline(std::cin, name);
+    name = trim(name);
+    if (name.empty()) {
+        std::cerr << "Sorry this thing is wrong" << std::endl;
+        return 1;
+    }
+
+    // Random selection of an excuse
+    std::random_device rd;
+    std::mt19937 gen(rd());
+    std::uniform_int_distribution<std::size_t> dist(0, excuses.size() - 1);
+    std::string chosenTemplate = excuses[dist(gen)];
+
+    // Substitute the placeholder with the actual name
+    std::string finalExcuse = substituteName(chosenTemplate, name);
+
+    std::cout << "\nGenerated excuse:\n" << finalExcuse << std::endl;
+    return 0;
+}
